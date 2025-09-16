@@ -8,6 +8,15 @@
 > Instead, you **pass your backend webhook URL dynamically** in `create-charge` via the `webhook_url` field.
 
 ---
+## Contributors
+
+- **Name:** Fattain Naime  
+- **Website:** [https://iamnaime.info.bd](https://iamnaime.info.bd)  
+
+**Acknowledgments:**  
+This documentation is community-authored with attention to clarity and completeness. Additional improvements, peer reviews, and real-world implementation feedback are welcome.  
+
+---
 
 ## Table of Contents
 
