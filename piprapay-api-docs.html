@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PipraPay API — Practical Integration Guide (v1.2)</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --card: #111a2b;
+    --ink: #e6eefc;
+    --muted: #9fb0ce;
+    --accent: #6aa8ff;
+    --code-bg: #0e1729;
+    --border: #22304a;
+  }
+  html, body { background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", Helvetica, "Apple Color Emoji","Segoe UI Emoji"; line-height: 1.6; }
+  .container { max-width: 980px; margin: 40px auto; padding: 0 20px; }
+  h1, h2, h3 { line-height: 1.2; }
+  h1 { font-size: 2.2rem; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--muted); margin-bottom: 1.5rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin: 18px 0; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  pre { background: var(--code-bg); padding: 16px; border-radius: 12px; overflow: auto; border: 1px solid var(--border); }
+  a { color: var(--accent); text-decoration: none; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; }
+  th, td { text-align: left; border-bottom: 1px solid var(--border); padding: 8px 10px; vertical-align: top; }
+  .tag { display: inline-block; background: #10213a; color: var(--ink); border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-right: 6px; }
+  .muted { color: var(--muted); }
+  .note { border-left: 3px solid var(--accent); padding-left: 12px; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 28px 0; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>PipraPay API — Practical Integration Guide (v1.2)</h1>
+    <p class="subtitle">Last updated: September 17, 2025</p>
+
+    <div class="card">
+      <p>This guide distills the official PipraPay API reference into a concise, developer‑friendly format you can drop into your project wiki or repo.</p>
+      <p>
+        <span class="tag">Overview</span>
+        <span class="tag">Auth</span>
+        <span class="tag">Create Charge</span>
+        <span class="tag">Verify Payment</span>
+        <span class="tag">Webhooks</span>
+        <span class="tag">Examples</span>
+        <span class="tag">Fallback strategy</span>
+      </p>
+    </div>
+
+    <h2 id="overview">1) Overview</h2>
+    <div class="card">
+      <p>PipraPay exposes a focused set of REST endpoints to start a payment (“create charge”), verify a payment by its <code>pp_id</code>, and receive asynchronous status via webhooks.</p>
+      <ul>
+        <li>Docs hub: <a href="https://piprapay.readme.io/reference/overview">piprapay.readme.io</a></li>
+        <li>Sandbox base URL: <code>https://sandbox.piprapay.com</code></li>
+        <li>Content type: <code>application/json</code></li>
+      </ul>
+      <p class="note muted">Create Charge returns identifiers to your redirect URL, and full payment details can be retrieved by verifying with the <em>pp_id</em>.</p>
+    </div>
+
+    <h2 id="envs">2) Environments</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Sandbox</strong>: <code>https://sandbox.piprapay.com</code></li>
+        <li><strong>Production (self‑hosted)</strong>: your deployed domain (e.g., <code>https://pay.yourdomain.com</code>)</li>
+      </ul>
+    </div>
+
+    <h2 id="auth">3) Authentication</h2>
+    <div class="card">
+      <p>All requests require an API Key supplied via headers. Webhook requests from PipraPay include the header <code>mh-piprapay-api-key</code>, which you should validate on your server.</p>
+      <pre><code>mh-piprapay-api-key: &lt;YOUR_API_KEY&gt;</code></pre>
+    </div>
+
+    <h2 id="flow">4) End‑to‑end Flow at a Glance</h2>
+    <div class="card">
+      <ol>
+        <li><strong>Create a charge</strong> with customer details, amount, and your <code>redirect_url</code> and <code>webhook_url</code>.</li>
+        <li>Customer completes checkout in PipraPay’s hosted flow.</li>
+        <li>After success, PipraPay posts identifiers to your <code>redirect_url</code> and fires your <code>webhook_url</code> (if provided).</li>
+        <li>Read the <code>pp_id</code> (from webhook or redirect).</li>
+        <li><strong>Verify</strong> using <code>POST /api/verify-payments</code> with that <code>pp_id</code>.</li>
+        <li>Mark the order as paid and fulfill.</li>
+      </ol>
+    </div>
+
+    <h2 id="create-charge">5) Create Charge</h2>
+    <div class="card">
+      <p><strong>Endpoint</strong>: <code>POST https://sandbox.piprapay.com/api/create-charge</code></p>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>full_name</code></td><td>string</td><td>Customer name</td></tr>
+          <tr><td><code>email_mobile</code></td><td>string</td><td>Customer email <em>or</em> mobile number</td></tr>
+          <tr><td><code>amount</code></td><td>string</td><td>Amount as string (e.g., <code>"10"</code>)</td></tr>
+          <tr><td><code>metadata</code></td><td>object</td><td>Optional JSON (e.g., <code>{{'order_id':'123'}}</code>)</td></tr>
+          <tr><td><code>redirect_url</code></td><td>string (URL)</td><td>Browser redirect after success</td></tr>
+          <tr><td><code>return_type</code></td><td>string</td><td><code>GET</code> or <code>POST</code></td></tr>
+          <tr><td><code>cancel_url</code></td><td>string (URL)</td><td>Redirect if the user cancels</td></tr>
+          <tr><td><code>webhook_url</code></td><td>string (URL)</td><td>Server-to-server notifications</td></tr>
+          <tr><td><code>currency</code></td><td>string</td><td>Currency code (e.g., <code>BDT</code>)</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Return identifiers</strong>:</p>
+      <ul>
+        <li><code>invoice_id</code> sent to your return URL (GET/POST)</li>
+        <li><code>pp_id</code> may be posted to your <code>redirect_url</code></li>
+      </ul>
+
+      <pre><code class="language-bash">curl --request POST   --url https://sandbox.piprapay.com/api/create-charge   --header 'accept: application/json'   --header 'content-type: application/json'   --data '{
+    "full_name": "Demo",
+    "email_mobile": "demo@gmail.com",
+    "amount": "10",
+    "metadata": {"order_id": "ORD-10001"},
+    "redirect_url": "https://example.com/pay/success",
+    "return_type": "POST",
+    "cancel_url": "https://example.com/pay/cancel",
+    "webhook_url": "https://example.com/api/piprapay/webhook",
+    "currency": "BDT"
+  }'
+</code></pre>
+
+      <details>
+        <summary>Node.js (axios)</summary>
+        <pre><code class="language-javascript">import axios from "axios";
+
+const res = await axios.post("https://sandbox.piprapay.com/api/create-charge",
+  {
+    full_name: "Demo",
+    email_mobile: "demo@gmail.com",
+    amount: "10",
+    metadata: { order_id: "ORD-10001" },
+    redirect_url: "https://example.com/pay/success",
+    return_type: "POST",
+    cancel_url: "https://example.com/pay/cancel",
+    webhook_url: "https://example.com/api/piprapay/webhook",
+    currency: "BDT"
+  },
+  {
+    headers: {
+      "accept": "application/json",
+      "content-type": "application/json"
+    }
+  }
+);
+
+console.log(res.data);</code></pre>
+      </details>
+
+      <details>
+        <summary>PHP (cURL)</summary>
+        <pre><code class="language-php">&lt;?php
+$ch = curl_init("https://sandbox.piprapay.com/api/create-charge");
+curl_setopt_array($ch, [
+  CURLOPT_POST =&gt; true,
+  CURLOPT_HTTPHEADER =&gt; [
+    "accept: application/json",
+    "content-type: application/json",
+  ],
+  CURLOPT_POSTFIELDS =&gt; json_encode([
+    "full_name" =&gt; "Demo",
+    "email_mobile" =&gt; "demo@gmail.com",
+    "amount" =&gt; "10",
+    "metadata" =&gt; ["order_id" =&gt; "ORD-10001"],
+    "redirect_url" =&gt; "https://example.com/pay/success",
+    "return_type" =&gt; "POST",
+    "cancel_url" =&gt; "https://example.com/pay/cancel",
+    "webhook_url" =&gt; "https://example.com/api/piprapay/webhook",
+    "currency" =&gt; "BDT"
+  ]),
+  CURLOPT_RETURNTRANSFER =&gt; true,
+]);
+$body = curl_exec($ch);
+curl_close($ch);
+echo $body;</code></pre>
+      </details>
+
+      <details>
+        <summary>Python (requests)</summary>
+        <pre><code class="language-python">import requests
+
+resp = requests.post(
+  "https://sandbox.piprapay.com/api/create-charge",
+  headers={"accept":"application/json","content-type":"application/json"},
+  json={
+    "full_name":"Demo",
+    "email_mobile":"demo@gmail.com",
+    "amount":"10",
+    "metadata":{"order_id":"ORD-10001"},
+    "redirect_url":"https://example.com/pay/success",
+    "return_type":"POST",
+    "cancel_url":"https://example.com/pay/cancel",
+    "webhook_url":"https://example.com/api/piprapay/webhook",
+    "currency":"BDT"
+  }
+)
+print(resp.json())</code></pre>
+      </details>
+
+      <p class="muted">Reference: Create Charge API. See official docs for live examples and response schemas.</p>
+    </div>
+
+    <h2 id="verify">6) Verify Payment</h2>
+    <div class="card">
+      <p><strong>Endpoint</strong>: <code>POST https://sandbox.piprapay.com/api/verify-payments</code></p>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>pp_id</code></td><td>string</td><td>PipraPay Payment ID to verify</td></tr>
+        </tbody>
+      </table>
+      <pre><code class="language-bash">curl --request POST   --url https://sandbox.piprapay.com/api/verify-payments   --header 'accept: application/json'   --header 'content-type: application/json'   --data '{"pp_id":"181055228"}'
+</code></pre>
+      <p class="muted">Reference: Verify Payment API.</p>
+    </div>
+
+    <h2 id="webhooks">7) Webhooks</h2>
+    <div class="card">
+      <p class="note"><strong>Security</strong>: Validate the <code>mh-piprapay-api-key</code> header on each webhook. Only process events if it matches your configured API key.</p>
+
+      <h3>Official PHP validation example</h3>
+      <p class="muted">From <a href="https://piprapay.readme.io/reference/validate-webhook">Validate Webhook</a> page:</p>
+      <pre><code class="language-php">&lt;?php
+$rawData = file_get_contents("php://input");
+$data = json_decode($rawData, true);
+
+$headers = getallheaders();
+$received_api_key = '';
+
+if (isset($headers['mh-piprapay-api-key'])) {
+    $received_api_key = $headers['mh-piprapay-api-key'];
+} elseif (isset($headers['Mh-Piprapay-Api-Key'])) {
+    $received_api_key = $headers['Mh-Piprapay-Api-Key'];
+} elseif (isset($_SERVER['HTTP_MH_PIPRAPAY_API_KEY'])) {
+    $received_api_key = $_SERVER['HTTP_MH_PIPRAPAY_API_KEY']; // fallback if needed
+}
+
+if ($received_api_key !== "YOUR_API") {
+    status_header(401);
+    echo json_encode(["status" => false, "message" => "Unauthorized request."]);
+    exit;
+}
+
+$pp_id = $data['pp_id'] ?? '';
+$customer_name = $data['customer_name'] ?? '';
+$customer_email_mobile = $data['customer_email_mobile'] ?? '';
+$payment_method = $data['payment_method'] ?? '';
+$amount = $data['amount'] ?? 0;
+$fee = $data['fee'] ?? 0;
+$refund_amount = $data['refund_amount'] ?? 0;
+$total = $data['total'] ?? 0;
+$currency = $data['currency'] ?? '';
+$status = $data['status'] ?? '';
+$date = $data['date'] ?? '';
+$metadata = $data['metadata'] ?? [];
+
+http_response_code(200);
+echo json_encode(['status' => true, 'message' => 'Webhook received']);</code></pre>
+
+      <h3>Example webhook payload</h3>
+      <pre><code class="language-json">{
+  "pp_id": "181055228",
+  "customer_name": "Demo",
+  "customer_email_mobile": "demo@gmail.com",
+  "payment_method": "bKash Personal",
+  "amount": "10",
+  "fee": "0",
+  "refund_amount": "0",
+  "total": 10,
+  "currency": "BDT",
+  "metadata": { "invoiceid": "uouyo" },
+  "sender_number": "568568568",
+  "transaction_id": "io[io[o",
+  "status": "completed",
+  "date": "2025-06-26 13:34:13"
+}</code></pre>
+
+      <p class="muted">Reference: Validate Webhook page. Use the payload’s <code>pp_id</code> to verify.</p>
+    </div>
+
+    <h2 id="server-flow">8) Putting It Together — Minimal Server Flow</h2>
+    <div class="card">
+      <p class="note"><strong>Important about <code>pp_id</code> sources:</strong></p>
+      <ul>
+        <li>PipraPay sends <code>pp_id</code> in two ways:<br/>1) via your <strong>webhook_url</strong> (server-to-server, preferred)<br/>2) via your <strong>redirect_url</strong> (browser flow)</li>
+        <li><strong>Prioritize the webhook</strong> (reliable, signed with API key).</li>
+        <li><strong>Use the redirect <code>pp_id</code> as a fallback</strong> if the webhook is delayed or not received.</li>
+        <li>Implement idempotency so both paths converge safely.</li>
+      </ul>
+
+      <ol>
+        <li>Call <strong>Create Charge</strong> with <code>redirect_url</code>, <code>cancel_url</code>, <code>webhook_url</code>.</li>
+        <li>Handle redirect (GET/POST) and capture <code>pp_id</code> if present.</li>
+        <li>Process webhook: validate header, read <code>pp_id</code>, enqueue processing.</li>
+        <li>Call <strong>Verify Payment</strong> with <code>pp_id</code>.</li>
+        <li>Mark order paid and fulfill on verified success.</li>
+      </ol>
+    </div>
+
+    <h2 id="troubleshoot">9) Troubleshooting &amp; Tips</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Fallback safety</strong>: if the webhook doesn’t reach your server, verify using the <code>pp_id</code> captured at <code>redirect_url</code>.</li>
+        <li><strong>Idempotency</strong>: use <code>pp_id</code> as the idempotency key when updating orders.</li>
+        <li><strong>Quick ACK</strong>: reply <code>200</code> to webhooks promptly; process heavy work async.</li>
+        <li><strong>Currency</strong>: pass <code>currency</code> explicitly (e.g., <code>BDT</code>).</li>
+      </ul>
+    </div>
+
+    <h2 id="refs">10) Reference Links</h2>
+    <div class="card">
+      <ul>
+        <li><a href="https://piprapay.readme.io/reference/overview">Overview</a></li>
+        <li><a href="https://piprapay.readme.io/reference/create-charge">Create Charge</a></li>
+        <li><a href="https://piprapay.readme.io/reference/verify-payments">Verify Payment</a></li>
+        <li><a href="https://piprapay.readme.io/reference/validate-webhook">Validate Webhook</a></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
