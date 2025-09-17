@@ -1,7 +1,7 @@
 
 # PipraPay Payment Gateway — **Comprehensive API & Webhook Guide**
 
-**Version:** 1.0 • **Last updated:** 2025-09-16 08:33:56
+**Version:** 1.0 • **Last updated:** 17-09-2025, 02:06 PM
 
 > This document is a fully self-contained, production-ready guide for integrating the PipraPay gateway into your backend.
 > It explains the API endpoints, the exact request/response contracts, security model, and a robust webhook strategy where **the webhook is handled in your backend only** — **no webhook needs to be configured on any dashboard/website**.  
