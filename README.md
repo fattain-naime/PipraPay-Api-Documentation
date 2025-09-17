@@ -52,7 +52,7 @@ This documentation is community-authored with attention to clarity and completen
 
 **Production Base URL**  
 ```
-https://payment.builderhall.com
+https://sandbox.piprapay.com
 ```
 
 **Authentication**  
@@ -94,7 +94,7 @@ Your Backend                  Customer Browser                PipraPay
 
 **Endpoint**  
 ```
-POST https://payment.builderhall.com/api/create-charge
+POST https://sandbox.piprapay.com/api/create-charge
 ```
 
 **Headers**
@@ -113,10 +113,10 @@ mh-piprapay-api-key: <YOUR_API_KEY>
   "metadata": {
     "invoiceid": "inv123"
   },
-  "redirect_url": "https://piprapay.com",
+  "redirect_url": "https://example.com/callback",
   "return_type": "GET",
-  "cancel_url": "https://piprapay.com",
-  "webhook_url": "https://your-backend.example.com/api/piprapay/webhook",
+  "cancel_url": "https://example.com/cancel",
+  "webhook_url": "https://example.com/api/piprapay/webhook",
   "currency": "BDT"
 }
 ```
@@ -132,14 +132,14 @@ mh-piprapay-api-key: <YOUR_API_KEY>
 | `return_type` | `"GET"` | ✔ | Method PipraPay uses when redirecting the customer to `redirect_url`. |
 | `cancel_url` | string (URL) | ✔ | Where to send user if they cancel from checkout. |
 | `webhook_url` | string (URL) | ✔ | **Your backend endpoint** to receive asynchronous payment results. **Do not configure webhooks on any dashboard**; pass this URL here instead. |
-| `currency` | string | ✔ | Currency code. Example: `"BDT"`. |
+| `currency` | string | ✔ | Currency code. Example: `"BDT" or "USD"`. |
 
 **Successful Response**
 ```json
 {
   "status": true,
   "pp_id": 789234894,
-  "pp_url": "https://payment.builderhall.com/payment/789234894"
+  "pp_url": "https://sandbox.piprapay.com/payment/789234894"
 }
 ```
 - `pp_id` is the unique payment identifier (string or number).  
@@ -147,15 +147,15 @@ mh-piprapay-api-key: <YOUR_API_KEY>
 
 **Typical Usage (curl)**
 ```bash
-curl --request POST   --url https://payment.builderhall.com/api/create-charge   --header 'accept: application/json'   --header 'content-type: application/json'   --header 'mh-piprapay-api-key: <YOUR_API_KEY>'   --data '{
+curl --request POST   --url https://sandbox.piprapay.com/api/create-charge   --header 'accept: application/json'   --header 'content-type: application/json'   --header 'mh-piprapay-api-key: <YOUR_API_KEY>'   --data '{
     "full_name": "Demo",
     "email_mobile": "01994493830",
     "amount": "10",
     "metadata": {"invoiceid": "inv123"},
-    "redirect_url": "https://yourapp.example.com/checkout/return",
+    "redirect_url": "https://example.com/checkout/return",
     "return_type": "GET",
-    "cancel_url": "https://yourapp.example.com/checkout/cancel",
-    "webhook_url": "https://yourapp.example.com/api/piprapay/webhook",
+    "cancel_url": "https://example.com/checkout/cancel",
+    "webhook_url": "https://example.com/api/piprapay/webhook",
     "currency": "BDT"
 }'
 ```
@@ -166,7 +166,7 @@ curl --request POST   --url https://payment.builderhall.com/api/create-charge   
 
 **Endpoint**  
 ```
-POST https://payment.builderhall.com/api/verify-payments
+POST https://sandbox.piprapay.com/api/verify-payments
 ```
 
 **Headers**
@@ -206,6 +206,7 @@ mh-piprapay-api-key: <YOUR_API_KEY>
 ```
 
 **When to use**  
+- In the Responae `"payment_method": "bKash Personal"` is the payment method that was use for payment in PipraPay checkout page.  
 - Immediately after receiving a webhook.  
 - When the customer returns to your `redirect_url` but you haven’t received the webhook yet.  
 - For back office reconciliation, refunds tracking, status checks.
@@ -419,7 +420,7 @@ if __name__ == "__main__":
 **A:** No. This integration is **backend-only**. Pass your webhook endpoint in `create-charge.webhook_url` from your server.
 
 **Q: Is `verify-payments` required if I already trust the webhook?**  
-**A:** It’s optional but recommended for defense-in-depth (e.g., if your webhook queue is delayed or to double-check final status).
+**A:** It’s optional but highly recommended for defense-in-depth (e.g., if your webhook queue is delayed or to double-check final status).
 
 **Q: Which status should I treat as success?**  
 **A:** `completed` only. For all other statuses, do not fulfill the order.
