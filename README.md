@@ -2,6 +2,8 @@
 
 *Last updated: September 17, 2025*
 
+- Pretty View: [PipraPay-Api-Documentation](https://fattain-naime.github.io/PipraPay-Api-Documentation)
+
 This guide distills the official PipraPay API reference into a concise, developer‑friendly format you can drop into your project wiki or repo.
 
 `Overview` • `Auth` • `Create Charge` • `Verify Payment` • `Webhooks` • `Examples` • `Fallback strategy`
