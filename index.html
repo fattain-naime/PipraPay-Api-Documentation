@@ -147,7 +147,14 @@ const res = await axios.post("https://sandbox.piprapay.com/api/create-charge",
   }
 );
 
-console.log(res.data);</code></pre>
+console.log(res.data);
+/* Example response:
+{
+"status": true,
+"pp_id": 1028828349,
+"pp_url": "https://sandbox.piprapay.com/payment/1028828349"
+}
+*/</code></pre>
       </details>
 
       <details>
@@ -175,7 +182,14 @@ curl_setopt_array($ch, [
 ]);
 $body = curl_exec($ch);
 curl_close($ch);
-echo $body;</code></pre>
+echo $body;
+/* Example response:
+{
+"status": true,
+"pp_id": 1028828349,
+"pp_url": "https://sandbox.piprapay.com/payment/1028828349"
+}
+*/</code></pre>
       </details>
 
       <details>
@@ -197,9 +211,20 @@ resp = requests.post(
     "currency":"BDT"
   }
 )
-print(resp.json())</code></pre>
+print(resp.json())
+# Example response:
+# {
+# "status": true,
+# "pp_id": 1028828349,
+# "pp_url": "https://sandbox.piprapay.com/payment/1028828349"
+# }</code></pre>
       </details>
-
+<p><strong>Example return response</strong>:</p>
+<pre><code class="language-json">{
+"status": true,
+"pp_id": 1028828349,
+"pp_url": "https://sandbox.piprapay.com/payment/1028828349"
+}</code></pre>
       <p class="muted">Reference: Create Charge API. See official docs for live examples and response schemas.</p>
     </div>
 
@@ -214,6 +239,25 @@ print(resp.json())</code></pre>
       </table>
       <pre><code class="language-bash">curl --request POST   --url https://sandbox.piprapay.com/api/verify-payments   --header 'accept: application/json'   --header 'content-type: application/json'   --data '{"pp_id":"181055228"}'
 </code></pre>
+      <p><strong>Example return response</strong>:</p>
+<pre><code class="language-json">{
+"pp_id": "1028828349",
+"customer_name": "Demo",
+"customer_email_mobile": "01999999999",
+"payment_method": "bKash Personal",
+"amount": 10,
+"fee": 0,
+"refund_amount": 0,
+"total": 10,
+"currency": "BDT",
+"metadata": {
+"invoiceid": "inv123"
+},
+"sender_number": "01999999999",
+"transaction_id": "ABCDEFG",
+"status": "completed",
+"date": "2025-09-20 02:03:17"
+}</code></pre>
       <p class="muted">Reference: Verify Payment API.</p>
     </div>
 
