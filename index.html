@@ -80,7 +80,7 @@
         <li><strong>Create a charge</strong> with customer details, amount, and your <code>redirect_url</code> and <code>webhook_url</code>.</li>
         <li>Customer completes checkout in PipraPay’s hosted flow.</li>
         <li>After success, PipraPay posts identifiers to your <code>redirect_url</code> and fires your <code>webhook_url</code> (if provided).</li>
-        <li>Read the <code>pp_id</code> (from webhook or redirect).</li>
+        <li>Read the <code>pp_id</code> (from redirect or store from create-charge api return).</li>
         <li><strong>Verify</strong> using <code>POST /api/verify-payments</code> with that <code>pp_id</code>.</li>
         <li>Mark the order as paid and fulfill.</li>
       </ol>
